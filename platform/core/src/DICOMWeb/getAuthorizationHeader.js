@@ -1,6 +1,4 @@
-// Commenting this out for now since it looks like Rollup is pulling in the
-// Node.js version instead of the Browser version of this package
-//import { btoa } from 'isomorphic-base64';
+import 'isomorphic-base64';
 import user from '../user';
 
 /**
@@ -12,12 +10,13 @@ import user from '../user';
  * @param {string|function} [server.requestOptions.auth]
  * @returns {Object} { Authorization }
  */
-export default function getAuthorizationHeader({ requestOptions } = {}) {
+export default function getAuthorizationHeader({ requestOptions } = {}, user) {
   const headers = {};
 
   // Check for OHIF.user since this can also be run on the server
   const accessToken = user && user.getAccessToken && user.getAccessToken();
 
+  // Auth for a specific server
   if (requestOptions && requestOptions.auth) {
     if (typeof requestOptions.auth === 'function') {
       // Custom Auth Header
@@ -26,7 +25,9 @@ export default function getAuthorizationHeader({ requestOptions } = {}) {
       // HTTP Basic Auth (user:password)
       headers.Authorization = `Basic ${btoa(requestOptions.auth)}`;
     }
-  } else if (accessToken) {
+  }
+  // Auth for the user's default
+  else if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
 

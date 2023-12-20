@@ -28,9 +28,7 @@ describe('getAuthorizationHeader', () => {
     };
 
     const expectedAuthorizationHeader = {
-      Authorization: `Basic ${btoa(
-        validServerWithoutPassword.requestOptions.auth
-      )}`,
+      Authorization: `Basic ${btoa(validServerWithoutPassword.requestOptions.auth)}`,
     };
 
     const authentication = getAuthorizationHeader(validServerWithoutPassword);
@@ -64,11 +62,11 @@ describe('getAuthorizationHeader', () => {
   it('should return an Authorization with accessToken when server is not defined and there is an accessToken', () => {
     user.getAccessToken.mockImplementationOnce(() => 'MOCKED_TOKEN');
 
-    const authentication = getAuthorizationHeader({});
-    const exptecteHeaderBasedOnUserAccessToekn = {
+    const authentication = getAuthorizationHeader({}, user);
+    const expectedHeaderBasedOnUserAccessToken = {
       Authorization: 'Bearer MOCKED_TOKEN',
     };
 
-    expect(authentication).toEqual(exptecteHeaderBasedOnUserAccessToekn);
+    expect(authentication).toEqual(expectedHeaderBasedOnUserAccessToken);
   });
 });

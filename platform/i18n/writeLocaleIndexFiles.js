@@ -21,7 +21,9 @@ const directories = getDirectories(directoryPath);
 
 function writeFile(filepath, name, content) {
   fs.writeFile(path.join(filepath, name), content, err => {
-    if (err) throw err;
+    if (err) {
+      throw err;
+    }
   });
 }
 
@@ -43,7 +45,7 @@ directories.forEach(directory => {
     const filename = path.basename(file);
     const namespace = path.basename(file, '.json');
 
-    content += `import ${namespace} from "./${filename}";\n`;
+    content += `import ${namespace} from './${filename}';\n`;
   });
 
   content += '\n';
@@ -51,7 +53,7 @@ directories.forEach(directory => {
   namespaces.forEach(namespace => {
     exportLines += `    ${namespace},\n`;
   });
-  exportLines += '  }\n};';
+  exportLines += '  }\n};\n';
 
   content += exportLines;
 
@@ -80,7 +82,7 @@ languageVariables.forEach(language => {
   fileContent += `  ...${language},\n`;
 });
 
-fileContent += '};';
+fileContent += '};\n';
 
 // Create one file (index.js) inside the locales folder
 // which exports each of the languages

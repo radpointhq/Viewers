@@ -42,7 +42,7 @@ implementation][react-viewer].
 
 ### Install
 
-> This library is pre- v1.0. All realeases until a v1.0 have the possibility of
+> This library is pre- v1.0. All releases until a v1.0 have the possibility of
 > introducing breaking changes. Please depend on an "exact" version in your
 > projects to prevent issues caused by loose versioning.
 
@@ -66,8 +66,8 @@ import { studies } from '@ohif/core';
 
 const studiesMetadata = await studies.retrieveStudiesMetadata(
   server, // Object
-  studyInstanceUids, // Array
-  seriesInstanceUids // Array (optional)
+  studyInstanceUIDs, // Array
+  seriesInstanceUIDs // Array (optional)
 );
 ```
 

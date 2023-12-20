@@ -1,11 +1,12 @@
-import CommandsManager from './CommandsManager.js';
-import HotkeysManager from './HotkeysManager.js';
-import hotkeys from './hotkeys';
-import log from './../log.js';
+import CommandsManager from './CommandsManager';
+import HotkeysManager from './HotkeysManager';
+import hotkeys from './../utils/hotkeys';
+import log from './../log';
+import objectHash from 'object-hash';
 
-jest.mock('./CommandsManager.js');
-jest.mock('./hotkeys');
-jest.mock('./../log.js');
+jest.mock('./CommandsManager');
+jest.mock('./../utils/hotkeys');
+jest.mock('./../log');
 
 describe('HotkeysManager', () => {
   let hotkeysManager, commandsManager;
@@ -18,27 +19,21 @@ describe('HotkeysManager', () => {
     log.warn.mockClear();
     jest.clearAllMocks();
   });
-
   it('has expected properties', () => {
     const allProperties = Object.keys(hotkeysManager);
-    const expectedProprties = [
-      'hotkeyDefinitions',
-      'hotkeyDefaults',
-      'isEnabled',
-    ];
+    const expectedProperties = ['hotkeyDefinitions', 'hotkeyDefaults', 'isEnabled'];
 
-    const containsAllExpectedProperties = expectedProprties.every(expected =>
+    const containsAllExpectedProperties = expectedProperties.every(expected =>
       allProperties.includes(expected)
     );
 
     expect(containsAllExpectedProperties).toBe(true);
   });
 
-  it('logs a warning if instantiated without a commandsManager', () => {
-    new HotkeysManager();
-
-    expect(log.warn.mock.calls.length).toBe(1);
-    expect(log.warn.mock.calls[0][0]).toEqual(
+  it('throws Error if instantiated without a commandsManager', () => {
+    expect(() => {
+      new HotkeysManager();
+    }).toThrow(
       'HotkeysManager instantiated without a commandsManager. Hotkeys will be unable to find and run commands.'
     );
   });
@@ -60,7 +55,10 @@ describe('HotkeysManager', () => {
   });
 
   describe('enable()', () => {
-    beforeEach(() => hotkeys.unpause.mockClear());
+    beforeEach(() => {
+      hotkeys.unpause = jest.fn();
+      hotkeys.unpause.mockClear();
+    });
 
     it('sets isEnabled property to true', () => {
       hotkeysManager.disable();
@@ -94,6 +92,7 @@ describe('HotkeysManager', () => {
       expect(firstCallArgs).toEqual(hotkeyDefinitions[0]);
       expect(secondCallArgs).toEqual(hotkeyDefinitions[1]);
     });
+
     it('does not set this.hotkeyDefaults when calling setHotKeys', () => {
       const hotkeyDefinitions = [{ commandName: 'dance', keys: '+' }];
 
@@ -114,45 +113,47 @@ describe('HotkeysManager', () => {
   });
 
   describe('registerHotkeys()', () => {
-    it('logs a warning and returns undefined if a commandName is not provided', () => {
+    it('throws an Error if a commandName is not provided', () => {
       const definition = { commandName: undefined, keys: '+' };
 
-      const result = hotkeysManager.registerHotkeys(definition);
-
-      expect(result).toBe(undefined);
-      expect(log.warn.mock.calls.length).toBe(1);
+      expect(() => {
+        hotkeysManager.registerHotkeys(definition);
+      }).toThrow();
     });
     it('updates hotkeyDefinitions property with registered keys', () => {
-      const definition = { commandName: 'dance', label: 'hello', keys: '+' };
-      const expectedHotkeyDefinition = { label: 'hello', keys: '+' };
+      const definition = {
+        commandName: 'dance',
+        commandOptions: {},
+        label: 'hello',
+        keys: '+',
+      };
 
       hotkeysManager.registerHotkeys(definition);
 
-      const numOfHotkeyDefinitions = Object.keys(
-        hotkeysManager.hotkeyDefinitions
-      ).length;
-      const hotkeyDefinitionForRegisteredCommand =
-        hotkeysManager.hotkeyDefinitions[definition.commandName];
+      const numOfHotkeyDefinitions = Object.keys(hotkeysManager.hotkeyDefinitions).length;
+
+      const commandHash = objectHash({
+        commandName: definition.commandName,
+        commandOptions: definition.commandOptions,
+      });
+      const hotkeyDefinitionForRegisteredCommand = hotkeysManager.hotkeyDefinitions[commandHash];
 
       expect(numOfHotkeyDefinitions).toBe(1);
-      expect(hotkeyDefinitionForRegisteredCommand).toEqual(
-        expectedHotkeyDefinition
-      );
+      expect(Object.keys(hotkeysManager.hotkeyDefinitions)[0]).toEqual(commandHash);
+      expect(hotkeyDefinitionForRegisteredCommand).toEqual(definition);
     });
-    it('calls hotkeys.bind for all keys in array', () => {
-      const definition = { commandName: 'dance', keys: ['h', 'e', 'l', 'o'] };
+    it('calls hotkeys.bind for the group of keys', () => {
+      const definition = { commandName: 'dance', keys: ['shift', 'e'] };
 
       hotkeysManager.registerHotkeys(definition);
 
-      expect(hotkeys.bind.mock.calls.length).toBe(definition.keys.length);
-      definition.keys.forEach((key, i) =>
-        expect(hotkeys.bind.mock.calls[i][0]).toBe(key)
-      );
+      expect(hotkeys.bind.mock.calls.length).toBe(1);
+      expect(hotkeys.bind.mock.calls[0][0]).toBe('shift+e');
     });
     it('calls hotkeys.unbind if commandName was previously registered, for each previously registered set of keys', () => {
       const firstDefinition = {
         commandName: 'dance',
-        keys: ['h', 'e', 'l', 'o'],
+        keys: ['alt', 'e'],
       };
       const secondDefinition = { commandName: 'dance', keys: 'a' };
 
@@ -161,12 +162,8 @@ describe('HotkeysManager', () => {
       // Second call
       hotkeysManager.registerHotkeys(secondDefinition);
 
-      expect(hotkeys.unbind.mock.calls.length).toBe(
-        firstDefinition.keys.length
-      );
-      firstDefinition.keys.forEach((key, i) =>
-        expect(hotkeys.unbind.mock.calls[i][0]).toBe(key)
-      );
+      expect(hotkeys.unbind.mock.calls.length).toBe(1);
+      expect(hotkeys.unbind.mock.calls[0][0]).toBe('alt+e');
     });
   });
 
@@ -176,9 +173,7 @@ describe('HotkeysManager', () => {
 
       hotkeysManager.restoreDefaultBindings();
 
-      expect(hotkeysManager.setHotkeys.mock.calls[0][0]).toEqual(
-        hotkeysManager.hotkeyDefaults
-      );
+      expect(hotkeysManager.setHotkeys.mock.calls[0][0]).toEqual(hotkeysManager.hotkeyDefaults);
     });
   });
 
